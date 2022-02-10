@@ -8,4 +8,4 @@ RUN apt-get update && apt-get upgrade -y && apt-get install -y apache2 php && a2
 # COPY config/default-ssl.conf /etc/apache2/sites-available
 # RUN a2ensite default-ssl
 
-#ENTRYPOINT [ "apachectl", "-D", "FOREGROUND" ]
+ENTRYPOINT [ "/bin/sh" "-c" ]
