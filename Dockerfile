@@ -1,11 +1,34 @@
-FROM debian:buster-slim
+#+++++++++++++++++++++++++++++++++++++++
+# Dockerfile for webdevops/php-apache:8.0-alpine
+#    -- automatically generated  --
+#+++++++++++++++++++++++++++++++++++++++
 
-RUN apt-get update && apt-get upgrade -y && apt-get install -y apache2 php && a2enmod ssl && mkdir /output && chown -R www-data:www-data output
+FROM webdevops/php:8.0-alpine
 
-# COPY config/server.crt /etc/apache2
-# COPY config/server.key /etc/apache2
+ENV WEB_DOCUMENT_ROOT=/app \
+    WEB_DOCUMENT_INDEX=index.php \
+    WEB_ALIAS_DOMAIN=*.vm \
+    WEB_PHP_TIMEOUT=600 \
+    WEB_PHP_SOCKET=""
+ENV WEB_PHP_SOCKET=127.0.0.1:9000
 
-# COPY config/default-ssl.conf /etc/apache2/sites-available
-# RUN a2ensite default-ssl
+COPY conf/ /opt/docker/
 
-ENTRYPOINT [ "/bin/sh" "-c" ]
+RUN set -x \
+    # Install apache
+    && apk-install \
+        apache2 \
+        apache2-ctl \
+        apache2-utils \
+        apache2-proxy \
+        apache2-ssl \
+    # Fix issue with module loading order of lbmethod_* (see https://serverfault.com/questions/922573/apache2-fails-to-start-after-recent-update-to-2-4-34-no-clue-why)
+    && sed -i '2,5{H;d}; ${p;x;s/^\n//}' /etc/apache2/conf.d/proxy.conf \
+    && sed -ri ' \
+        s!^(\s*CustomLog)\s+\S+!\1 /proc/self/fd/1!g; \
+        s!^(\s*ErrorLog)\s+\S+!\1 /proc/self/fd/2!g; \
+        ' /etc/apache2/httpd.conf \
+    && docker-run-bootstrap \
+    && docker-image-cleanup
+
+EXPOSE 8080
